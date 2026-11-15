@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Azərbaycan hava proqnozu</title>
+<style>
+:root{--bg:#E9EEF1;--sf:#fff;--ink:#12232B;--mu:#5B6C75;--ln:#D3DCE1}
+@media(prefers-color-scheme:dark){:root{--bg:#0E1A20;--sf:#16262E;--ink:#E8F0F3;--mu:#93A6B0;--ln:#26383F}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button{font:inherit;color:inherit;cursor:pointer}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 14px 10px;border-bottom:1px solid var(--ln)}
+h1{margin:0;font-size:1.25rem;font-weight:650}
+h2{margin:0;font-size:1.5rem}
+h3{margin:16px 0 8px;font-size:1rem}
+#st,.mu,small{color:var(--mu)}
+#st{font-size:.8rem;margin:2px 0 10px}
+.tb{display:flex;gap:8px}
+input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--ln);border-radius:10px;background:var(--sf);color:inherit;font:inherit}
+.rf{padding:0 14px;border:1px solid var(--ln);border-radius:10px;background:var(--sf)}
+.ch{display:flex;gap:6px;overflow-x:auto;margin-top:8px}
+.ch button{flex:none;padding:6px 12px;border:1px solid var(--ln);border-radius:99px;background:none}
+.ch .on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+main{padding:12px 14px 40px;max-width:1100px;margin:auto}
+.sm{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+#g{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.c{display:grid;gap:2px;text-align:left;padding:10px 12px;background:var(--sf);border:1px solid var(--ln);border-left:5px solid var(--t);border-radius:10px}
+.tm{font-size:2rem;font-weight:300;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--t)}
+.ds,.mm{font-size:.85rem;color:var(--mu)}
+.ft{font-size:.8rem;margin-top:24px}
+#sh[hidden]{display:none}
+.bd{position:fixed;inset:0;background:#0008;z-index:10}
+.pn{position:fixed;z-index:11;left:0;right:0;bottom:0;max-width:640px;max-height:92vh;margin:auto;overflow:auto;background:var(--bg);border-radius:18px 18px 0 0;padding:16px 14px 28px;animation:up .2s}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.pn{animation:none}}
+.x{position:absolute;right:8px;top:6px;width:44px;height:44px;border:0;background:none;font-size:1.8rem}
+.big{font-size:4rem;font-weight:250;line-height:1.1;color:var(--t)}
+.gr{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.gr div{background:var(--sf);border:1px solid var(--ln);border-radius:10px;padding:8px 10px}
+.hs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}
+.hs div{flex:none;width:58px;text-align:center;background:var(--sf);border:1px solid var(--ln);border-radius:10px;padding:6px 0;font-size:.85rem}
+.dr{display:grid;grid-template-columns:50px 24px 36px 30px 1fr 30px;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--ln);font-size:.9rem;font-variant-numeric:tabular-nums}
+.br{position:relative;height:6px;border-radius:3px;background:var(--ln)}
+.br u{position:absolute;top:0;bottom:0;min-width:6px;border-radius:3px}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+</style>
+</head>
+<body>
+<header>
+<h1>Azərbaycan hava proqnozu</h1>
+<div id="st">Yüklənir…</div>
+<div class="tb"><input id="q" type="search" placeholder="Rayon və ya şəhər axtar" aria-label="Axtar"><button class="rf" id="rf">Yenilə</button></div>
+<div class="ch" id="ch"><button class="on" data-s="a">Əlifba</button><button data-s="h">İsti</button><button data-s="c">Soyuq</button><button data-s="y">Yağış</button><button data-s="k">Külək</button></div>
+</header>
+<main>
+<div class="sm" id="sm"></div>
+<div id="g"></div>
+<p class="mu ft">Məlumat mənbəyi: Open-Meteo.com. Koordinatlar rayon mərkəzləri üzrədir.</p>
+</main>
+<div id="sh" hidden>
+<div class="bd"></div>
+<section class="pn" id="pn" role="dialog" aria-modal="true" aria-labelledby="sn"><button class="x" aria-label="Bağla">×</button><div id="sc"></div></section>
+</div>
+<script>
+const R="Abşeron|40.45|49.75;Ağcabədi|40.05|47.46;Ağdam|39.99|46.93;Ağdaş|40.65|47.47;Ağdərə|40.20|46.93;Ağstafa|41.12|45.45;Ağsu|40.57|48.40;Astara|38.46|48.87;Babək|39.15|45.45;Balakən|41.71|46.41;Beyləqan|39.77|47.62;Bərdə|40.37|47.13;Biləsuvar|39.46|48.55;Cəbrayıl|39.40|47.03;Cəlilabad|39.21|48.50;Culfa|38.96|45.63;Daşkəsən|40.52|46.08;Füzuli|39.60|47.14;Gədəbəy|40.57|45.81;Goranboy|40.61|46.79;Göyçay|40.65|47.74;Göygöl|40.59|46.32;Hacıqabul|40.04|48.94;Xaçmaz|41.46|48.80;Xızı|40.91|49.07;Xocalı|39.91|46.79;Xocavənd|39.79|47.11;İmişli|39.87|48.06;İsmayıllı|40.79|48.15;Kəlbəcər|40.10|46.04;Kəngərli|39.40|45.15;Kürdəmir|40.34|48.16;Laçın|39.64|46.55;Lerik|38.77|48.42;Lənkəran|38.75|48.85;Masallı|39.03|48.66;Neftçala|39.37|49.25;Oğuz|41.07|47.46;Ordubad|38.90|46.02;Qax|41.42|46.92;Qazax|41.09|45.37;Qobustan|40.53|48.93;Quba|41.36|48.51;Qubadlı|39.34|46.58;Qusar|41.43|48.43;Saatlı|39.93|48.37;Sabirabad|40.00|48.48;Sədərək|39.71|44.88;Salyan|39.60|48.98;Samux|40.76|46.41;Siyəzən|41.08|49.11;Şabran|41.22|48.99;Şahbuz|39.41|45.57;Şamaxı|40.63|48.64;Şəki|41.19|47.17;Şəmkir|40.83|46.02;Şərur|39.55|44.98;Şuşa|39.76|46.75;Tərtər|40.34|46.93;Tovuz|40.99|45.63;Ucar|40.51|47.65;Yardımlı|38.91|48.24;Yevlax|40.62|47.15;Zaqatala|41.63|46.64;Zərdab|40.22|47.71;Zəngilan|39.09|46.65;Bakı*|40.41|49.87;Gəncə*|40.68|46.36;Sumqayıt*|40.59|49.67;Mingəçevir*|40.77|47.05;Naxçıvan*|39.21|45.41;Şirvan*|39.93|48.92;Naftalan*|40.51|46.82;Xankəndi*|39.82|46.77"
+.split(";").map(s=>{const[a,b,c]=s.split("|");return{n:a.replace("*",""),city:a.endsWith("*"),lat:+b,lon:+c}});
+const $=s=>document.querySelector(s);
+const WC={0:["Açıq","☀️"],1:["Əsasən açıq","🌤️"],2:["Az buludlu","⛅"],3:["Buludlu","☁️"],45:["Dumanlı","🌫️"],48:["Şaxtalı duman","🌫️"],51:["Yüngül çiskin","🌦️"],53:["Çiskin","🌦️"],55:["Güclü çiskin","🌦️"],56:["Dondurucu çiskin","🌧️"],57:["Dondurucu çiskin","🌧️"],61:["Yüngül yağış","🌧️"],63:["Yağış","🌧️"],65:["Güclü yağış","🌧️"],66:["Dondurucu yağış","🌧️"],67:["Dondurucu yağış","🌧️"],71:["Yüngül qar","🌨️"],73:["Qar","🌨️"],75:["Güclü qar","❄️"],77:["Qar dənələri","❄️"],80:["Leysan","🌦️"],81:["Leysan","🌧️"],82:["Güclü leysan","⛈️"],85:["Qar leysanı","🌨️"],86:["Güclü qar leysanı","❄️"],95:["Tufan","⛈️"],96:["Dolu ilə tufan","⛈️"],99:["Dolu ilə tufan","⛈️"]};
+const wc=c=>WC[c]||["—","❔"];
+const DN=["Baz","B.e","Ç.a","Çər","C.a","Cüm","Şən"];
+const DIR=["Şimal","Şimal-şərq","Şərq","Cənub-şərq","Cənub","Cənub-qərb","Qərb","Şimal-qərb"];
+const v=(x,u="")=>x==null?"—":x+u;
+const rd=Math.round;
+const tc=t=>{const x=Math.max(-5,Math.min(38,t));return`hsl(${rd(220-(x+5)/43*205)} 75% 48%)`};
+const f=s=>s.toLocaleLowerCase("az").replace(/[əıöüçşğ]/g,c=>({ə:"e",ı:"i",ö:"o",ü:"u",ç:"c",ş:"s",ğ:"g"}[c]));
+const CUR="temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m";
+const HR="temperature_2m,precipitation_probability,weather_code";
+const DY="weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunrise,sunset,uv_index_max";
+const URL_=`https://api.open-meteo.com/v1/forecast?latitude=${R.map(r=>r.lat).join()}&longitude=${R.map(r=>r.lon).join()}&current=${CUR}&hourly=${HR}&daily=${DY}&forecast_days=7&forecast_hours=24&wind_speed_unit=ms&timezone=Asia%2FBaku`;
+const K={h:o=>-o.d.current.temperature_2m,c:o=>o.d.current.temperature_2m,y:o=>-(o.d.daily.precipitation_sum[0]||0),k:o=>-o.d.current.wind_speed_10m};
+let D=[],q="",sort="a";
+
+async function load(){
+  $("#st").textContent="Yüklənir…";
+  try{
+    const r=await fetch(URL_);if(!r.ok)throw 0;
+    const j=await r.json();D=Array.isArray(j)?j:[j];
+    try{localStorage.setItem("azw",JSON.stringify({t:Date.now(),D}))}catch(e){}
+    const d=new Date();
+    $("#st").textContent="Yeniləndi: "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  }catch(e){
+    try{
+      const c=JSON.parse(localStorage.getItem("azw"));if(!c)throw 0;
+      D=c.D;$("#st").textContent="İnternet yoxdur. Son saxlanan məlumat: "+new Date(c.t).toLocaleString();
+    }catch(_){$("#st").textContent="Məlumat alınmadı. İnternetə qoşulub «Yenilə» düyməsinə basın.";return}
+  }
+  render();
+}
+
+function summary(){
+  const A=D.map((d,i)=>({i,t:d.current.temperature_2m,w:d.current.wind_speed_10m,p:d.daily.precipitation_sum[0]||0}));
+  const mx=k=>A.reduce((a,b)=>b[k]>a[k]?b:a),mi=k=>A.reduce((a,b)=>b[k]<a[k]?b:a);
+  const wet=mx("p");
+  const X=[["Ən isti",mx("t"),o=>rd(o.t)+"°"],["Ən soyuq",mi("t"),o=>rd(o.t)+"°"],["Ən küləkli",mx("w"),o=>o.w.toFixed(1)+" m/s"],["Ən çox yağıntı",wet.p>0?wet:null,o=>o.p+" mm"]].filter(x=>x[1]);
+  $("#sm").innerHTML=X.map(([l,o,fn])=>`<button class="c" style="--t:${tc(o.t)}" data-i="${o.i}"><small>${l}</small><b>${R[o.i].n}</b><span class="tm" style="font-size:1.4rem">${fn(o)}</span></button>`).join("");
+}
+
+function render(){
+  summary();
+  const L=R.map((r,i)=>({r,i,d:D[i]})).filter(o=>o.d&&o.d.current&&f(o.r.n).includes(q));
+  L.sort(sort==="a"?(a,b)=>a.r.n.localeCompare(b.r.n,"az"):(a,b)=>K[sort](a)-K[sort](b));
+  $("#g").innerHTML=L.length?L.map(o=>{
+    const c=o.d.current,dy=o.d.daily,[t,e]=wc(c.weather_code);
+    return`<button class="c" style="--t:${tc(c.temperature_2m)}" data-i="${o.i}"><b>${o.r.n}</b><span class="tm">${rd(c.temperature_2m)}°</span><span class="ds">${e} ${t}</span><span class="mm">${rd(dy.temperature_2m_min[0])}° / ${rd(dy.temperature_2m_max[0])}°</span></button>`;
+  }).join(""):`<p class="mu">Bu adla rayon tapılmadı. Axtarışı dəyişin.</p>`;
+}
+
+function openSheet(i){
+  const r=R[i],d=D[i],c=d.current,dy=d.daily,h=d.hourly,[t,e]=wc(c.weather_code);
+  const dir=DIR[rd(c.wind_direction_10m/45)%8];
+  const st=[
+    ["Hiss olunan",rd(c.apparent_temperature)+"°"],
+    ["Rütubət",c.relative_humidity_2m+"%"],
+    ["Külək",c.wind_speed_10m.toFixed(1)+" m/s, "+dir],
+    ["Küləyin zərbəsi",c.wind_gusts_10m.toFixed(1)+" m/s"],
+    ["Təzyiq",rd(c.pressure_msl*0.75006)+" mm c.süt."],
+    ["Buludluluq",c.cloud_cover+"%"],
+    ["Yağıntı (indi)",c.precipitation+" mm"],
+    ["Bu gün yağıntı",v(dy.precipitation_sum[0]," mm")],
+    ["Yağış ehtimalı",v(dy.precipitation_probability_max[0],"%")],
+    ["UV indeksi",v(dy.uv_index_max[0]!=null?rd(dy.uv_index_max[0]):null)],
+    ["Gün çıxır",dy.sunrise[0].slice(11)],
+    ["Gün batır",dy.sunset[0].slice(11)]
+  ];
+  const H=h.time.map((x,k)=>`<div><div class="mu">${k?x.slice(11,16):"İndi"}</div><div>${wc(h.weather_code[k])[1]}</div><b>${rd(h.temperature_2m[k])}°</b><div class="mu">${v(h.precipitation_probability[k],"%")}</div></div>`).join("");
+  const mn=Math.min(...dy.temperature_2m_min),mxx=Math.max(...dy.temperature_2m_max),sp=(mxx-mn)||1;
+  const W=dy.time.map((x,k)=>{
+    const a=dy.temperature_2m_min[k],b=dy.temperature_2m_max[k];
+    return`<div class="dr"><span>${k?DN[new Date(x+"T00:00").getDay()]:"Bu gün"}</span><span>${wc(dy.weather_code[k])[1]}</span><span class="mu">${v(dy.precipitation_probability_max[k],"%")}</span><span>${rd(a)}°</span><i class="br"><u style="left:${(a-mn)/sp*100}%;width:${(b-a)/sp*100}%;background:linear-gradient(90deg,${tc(a)},${tc(b)})"></u></i><span>${rd(b)}°</span></div>`;
+  }).join("");
+  $("#pn").style.setProperty("--t",tc(c.temperature_2m));
+  $("#sc").innerHTML=`<h2 id="sn">${r.n}</h2><div class="mu">${r.city?"şəhər":"rayon"}</div><div class="big">${rd(c.temperature_2m)}°</div><div>${e} ${t}. Bu gün ${rd(dy.temperature_2m_min[0])}° / ${rd(dy.temperature_2m_max[0])}°</div><div class="gr">${st.map(([a,b])=>`<div><small>${a}</small><br><b>${b}</b></div>`).join("")}</div><h3>Növbəti 24 saat</h3><div class="hs">${H}</div><h3>7 günlük proqnoz</h3>${W}`;
+  $("#sh").hidden=false;document.body.style.overflow="hidden";
+  $("#pn").scrollTop=0;$(".x").focus();
+}
+const closeSheet=()=>{$("#sh").hidden=true;document.body.style.overflow=""};
+
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-i]");if(b)return openSheet(+b.dataset.i);
+  const s=e.target.closest("[data-s]");
+  if(s){sort=s.dataset.s;document.querySelectorAll("#ch button").forEach(x=>x.classList.toggle("on",x===s));render()}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
+$(".bd").onclick=closeSheet;$(".x").onclick=closeSheet;
+$("#q").oninput=e=>{q=f(e.target.value.trim());render()};
+$("#rf").onclick=load;
+load();
+setInterval(load,15*60*1000);
+</script>
+</body>
+</html>
