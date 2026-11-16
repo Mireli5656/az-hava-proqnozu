@@ -43,6 +43,11 @@ main{padding:12px 14px 40px;max-width:1100px;margin:auto}
 .dr{display:grid;grid-template-columns:50px 24px 36px 30px 1fr 30px;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--ln);font-size:.9rem;font-variant-numeric:tabular-nums}
 .br{position:relative;height:6px;border-radius:3px;background:var(--ln)}
 .br u{position:absolute;top:0;bottom:0;min-width:6px;border-radius:3px}
+.fv{position:absolute;right:52px;top:6px;width:44px;height:44px;border:0;background:none;font-size:1.6rem}
+.bg{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.bg:empty{display:none}
+.bg span{padding:4px 10px;border-radius:99px;color:#fff;font-size:.85rem;background:var(--b)}
+.sp{display:block;width:100%;height:56px;margin:4px 0}
 :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 </style>
 </head>
@@ -50,7 +55,7 @@ main{padding:12px 14px 40px;max-width:1100px;margin:auto}
 <header>
 <h1>Azərbaycan hava proqnozu</h1>
 <div id="st">Yüklənir…</div>
-<div class="tb"><input id="q" type="search" placeholder="Rayon və ya şəhər axtar" aria-label="Axtar"><button class="rf" id="rf">Yenilə</button></div>
+<div class="tb"><input id="q" type="search" placeholder="Rayon və ya şəhər axtar" aria-label="Axtar"><button class="rf" id="nr" aria-label="Mənə ən yaxın rayon" title="Mənə ən yaxın rayon">📍</button><button class="rf" id="rf">Yenilə</button></div>
 <div class="ch" id="ch"><button class="on" data-s="a">Əlifba</button><button data-s="h">İsti</button><button data-s="c">Soyuq</button><button data-s="y">Yağış</button><button data-s="k">Külək</button></div>
 </header>
 <main>
@@ -79,7 +84,8 @@ const HR="temperature_2m,precipitation_probability,weather_code";
 const DY="weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunrise,sunset,uv_index_max";
 const URL_=`https://api.open-meteo.com/v1/forecast?latitude=${R.map(r=>r.lat).join()}&longitude=${R.map(r=>r.lon).join()}&current=${CUR}&hourly=${HR}&daily=${DY}&forecast_days=7&forecast_hours=24&wind_speed_unit=ms&timezone=Asia%2FBaku`;
 const K={h:o=>-o.d.current.temperature_2m,c:o=>o.d.current.temperature_2m,y:o=>-(o.d.daily.precipitation_sum[0]||0),k:o=>-o.d.current.wind_speed_10m};
-let D=[],q="",sort="a";
+let D=[],q="",sort="a",cur=0,FV=[];
+try{FV=JSON.parse(localStorage.getItem("azf"))||[]}catch(e){}
 
 async function load(){
   $("#st").textContent="Yüklənir…";
@@ -110,9 +116,10 @@ function render(){
   summary();
   const L=R.map((r,i)=>({r,i,d:D[i]})).filter(o=>o.d&&o.d.current&&f(o.r.n).includes(q));
   L.sort(sort==="a"?(a,b)=>a.r.n.localeCompare(b.r.n,"az"):(a,b)=>K[sort](a)-K[sort](b));
+  L.sort((a,b)=>FV.includes(b.r.n)-FV.includes(a.r.n));
   $("#g").innerHTML=L.length?L.map(o=>{
     const c=o.d.current,dy=o.d.daily,[t,e]=wc(c.weather_code);
-    return`<button class="c" style="--t:${tc(c.temperature_2m)}" data-i="${o.i}"><b>${o.r.n}</b><span class="tm">${rd(c.temperature_2m)}°</span><span class="ds">${e} ${t}</span><span class="mm">${rd(dy.temperature_2m_min[0])}° / ${rd(dy.temperature_2m_max[0])}°</span></button>`;
+    return`<button class="c" style="--t:${tc(c.temperature_2m)}" data-i="${o.i}"><b>${FV.includes(o.r.n)?"★ ":""}${o.r.n}</b><span class="tm">${rd(c.temperature_2m)}°</span><span class="ds">${e} ${t}</span><span class="mm">${rd(dy.temperature_2m_min[0])}° / ${rd(dy.temperature_2m_max[0])}°</span></button>`;
   }).join(""):`<p class="mu">Bu adla rayon tapılmadı. Axtarışı dəyişin.</p>`;
 }
 
@@ -139,14 +146,35 @@ function openSheet(i){
     const a=dy.temperature_2m_min[k],b=dy.temperature_2m_max[k];
     return`<div class="dr"><span>${k?DN[new Date(x+"T00:00").getDay()]:"Bu gün"}</span><span>${wc(dy.weather_code[k])[1]}</span><span class="mu">${v(dy.precipitation_probability_max[k],"%")}</span><span>${rd(a)}°</span><i class="br"><u style="left:${(a-mn)/sp*100}%;width:${(b-a)/sp*100}%;background:linear-gradient(90deg,${tc(a)},${tc(b)})"></u></i><span>${rd(b)}°</span></div>`;
   }).join("");
+  cur=i;
+  const wn=[];
+  if(dy.temperature_2m_max[0]>=35)wn.push(["🔥 Çox isti","#d9480f"]);
+  if(dy.temperature_2m_min[0]<=0)wn.push(["🧊 Şaxta","#1971c2"]);
+  if((dy.precipitation_sum[0]||0)>=10)wn.push(["🌧️ Güclü yağıntı","#1864ab"]);
+  if(c.wind_gusts_10m>=15)wn.push(["💨 Güclü külək","#5f3dc4"]);
+  if((dy.uv_index_max[0]||0)>=8)wn.push(["🕶️ Yüksək UV","#c2255c"]);
+  const T=h.temperature_2m,ta=Math.min(...T),tb=Math.max(...T),ts=(tb-ta)||1;
+  const P=T.map((x,k)=>`${(k/(T.length-1)*236+2).toFixed(1)},${(44-(x-ta)/ts*38).toFixed(1)}`).join(" ");
+  const SP=`<svg class="sp" viewBox="0 0 240 50" preserveAspectRatio="none" role="img" aria-label="24 saatlıq temperatur qrafiki"><polyline points="${P}" fill="none" stroke="var(--t)" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg><div class="mu">24 saat ərzində ${rd(ta)}° ilə ${rd(tb)}° arası</div>`;
   $("#pn").style.setProperty("--t",tc(c.temperature_2m));
-  $("#sc").innerHTML=`<h2 id="sn">${r.n}</h2><div class="mu">${r.city?"şəhər":"rayon"}</div><div class="big">${rd(c.temperature_2m)}°</div><div>${e} ${t}. Bu gün ${rd(dy.temperature_2m_min[0])}° / ${rd(dy.temperature_2m_max[0])}°</div><div class="gr">${st.map(([a,b])=>`<div><small>${a}</small><br><b>${b}</b></div>`).join("")}</div><h3>Növbəti 24 saat</h3><div class="hs">${H}</div><h3>7 günlük proqnoz</h3>${W}`;
+  $("#sc").innerHTML=`<button class="fv" id="fv" aria-label="Sevimlilərə əlavə et" aria-pressed="${FV.includes(r.n)}">${FV.includes(r.n)?"★":"☆"}</button><h2 id="sn">${r.n}</h2><div class="mu">${r.city?"şəhər":"rayon"}</div><div class="big">${rd(c.temperature_2m)}°</div><div>${e} ${t}. Bu gün ${rd(dy.temperature_2m_min[0])}° / ${rd(dy.temperature_2m_max[0])}°</div><div class="bg">${wn.map(([x,y])=>`<span style="--b:${y}">${x}</span>`).join("")}</div><div class="gr" id="gr">${st.map(([a,b])=>`<div><small>${a}</small><br><b>${b}</b></div>`).join("")}</div><h3>Növbəti 24 saat</h3>${SP}<div class="hs">${H}</div><h3>7 günlük proqnoz</h3>${W}`;
   $("#sh").hidden=false;document.body.style.overflow="hidden";
-  $("#pn").scrollTop=0;$(".x").focus();
+  $("#pn").scrollTop=0;$(".x").focus();air(i);
+}
+async function air(i){
+  try{
+    const r=await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${R[i].lat}&longitude=${R[i].lon}&current=european_aqi,pm2_5,pm10&timezone=Asia%2FBaku`);
+    const c=(await r.json()).current;
+    if(cur!==i||!c||c.european_aqi==null)return;
+    const a=c.european_aqi,l=["Əla","Yaxşı","Orta","Pis","Çox pis","Ekstremal pis"][Math.min(5,Math.floor(a/20))];
+    $("#gr").insertAdjacentHTML("beforeend",`<div><small>Hava keyfiyyəti</small><br><b>${rd(a)} (${l})</b></div><div><small>PM2.5 / PM10</small><br><b>${rd(c.pm2_5)} / ${rd(c.pm10)} µg/m³</b></div>`);
+  }catch(e){}
 }
 const closeSheet=()=>{$("#sh").hidden=true;document.body.style.overflow=""};
 
 document.addEventListener("click",e=>{
+  const fb=e.target.closest("#fv");
+  if(fb){const n=R[cur].n,k=FV.indexOf(n);k<0?FV.push(n):FV.splice(k,1);try{localStorage.setItem("azf",JSON.stringify(FV))}catch(_){}fb.textContent=k<0?"★":"☆";fb.setAttribute("aria-pressed",k<0);render();return}
   const b=e.target.closest("[data-i]");if(b)return openSheet(+b.dataset.i);
   const s=e.target.closest("[data-s]");
   if(s){sort=s.dataset.s;document.querySelectorAll("#ch button").forEach(x=>x.classList.toggle("on",x===s));render()}
@@ -155,6 +183,18 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 $(".bd").onclick=closeSheet;$(".x").onclick=closeSheet;
 $("#q").oninput=e=>{q=f(e.target.value.trim());render()};
 $("#rf").onclick=load;
+$("#nr").onclick=()=>{
+  if(!navigator.geolocation){$("#st").textContent="Brauzer məkanı dəstəkləmir.";return}
+  $("#st").textContent="Məkan müəyyən edilir…";
+  navigator.geolocation.getCurrentPosition(p=>{
+    const a=p.coords.latitude,b=p.coords.longitude,k=Math.cos(a*Math.PI/180);
+    let m=0,md=1e9;
+    R.forEach((r,i)=>{const d=(r.lat-a)**2+((r.lon-b)*k)**2;if(d<md){md=d;m=i}});
+    if(md>9){$("#st").textContent="Məkanınız Azərbaycandan kənardadır.";return}
+    $("#st").textContent="Sizə ən yaxın: "+R[m].n;
+    if(D[m])openSheet(m);
+  },()=>{$("#st").textContent="Məkan icazəsi verilmədi."},{timeout:10000});
+};
 load();
 setInterval(load,15*60*1000);
 </script>
