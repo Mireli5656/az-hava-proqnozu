@@ -8,7 +8,7 @@ Azərbaycanın **bütün 66 rayonu** və 8 böyük şəhəri üçün canlı hava
 ![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-222?logo=github&logoColor=white)
 ![Asılılıq yoxdur](https://img.shields.io/badge/as%C4%B1l%C4%B1l%C4%B1q-yoxdur-brightgreen)
 
-**Canlı demo:** https://mireli5656.github.io/az-hava-xeritesi/
+**Canlı demo:** https://mireli5656.github.io/az-hava-proqnozu/
 
 ## ✨ Xüsusiyyətlər
 
